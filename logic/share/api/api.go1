@@ -21,6 +21,7 @@ type IPlugin interface {
 	UpdateShare(ctx context.Context, share model.Share) xerror.IError
 	DeleteShares(ctx context.Context, shares ...model.Identify) xerror.IError
 	GetShares(ctx context.Context, condition model.ShareCondition) ([]model.Share, model.PageInfo, xerror.IError)
+	GetShareFiles(ctx context.Context, condition model.ShareFilesCondition) ([]byte, xerror.IError)
 	CheckSharePassword(ctx context.Context, share model.Share) (bool, xerror.IError)
 
 	AddComment(ctx context.Context, comment model.Comment) (model.Identify, xerror.IError)

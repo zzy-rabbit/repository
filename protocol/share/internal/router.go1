@@ -6,6 +6,15 @@ import (
 )
 
 func (s *service) registerRouter(ctx context.Context, fiberApp *fiber.App) {
+	shareFileGroup := fiberApp.Group(
+		"/system/api/v1/share/file",
+		s.IHttp.CORSMiddleware(),
+		s.IHttp.TimingMiddleware(func(ctx *fiber.Ctx) bool {
+			return true
+		}),
+	)
+	shareFileGroup.Post("", s.GetShareFiles)
+
 	shareGroup := fiberApp.Group(
 		"/system/api/v1/share",
 		s.IHttp.CORSMiddleware(),

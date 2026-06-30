@@ -17,6 +17,12 @@ type ShareCondition struct {
 	ExpireBefore int64    `json:"expire_before"`
 }
 
+type ShareFilesCondition struct {
+	Identify
+	Password string `json:"password"`
+	//SecretKey string `json:"secret_key"`
+}
+
 type Comment struct {
 	Identify
 	Share     string   `json:"share"`

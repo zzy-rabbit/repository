@@ -2,10 +2,15 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/zzy-rabbit/ishare/model"
 	"github.com/zzy-rabbit/xtools/xerror"
+	"github.com/zzy-rabbit/xtools/xfile"
 	"github.com/zzy-rabbit/xtools/xtrace"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 func (s *service) AddShare(ctx context.Context, share model.Share) (model.Identify, xerror.IError) {
@@ -73,6 +78,70 @@ func (s *service) DeleteShares(ctx context.Context, identifies ...model.Identify
 func (s *service) GetShares(ctx context.Context, condition model.ShareCondition) ([]model.Share, model.PageInfo, xerror.IError) {
 	defer xtrace.Trace(ctx)(condition)
 	return s.IDatabase.GetDB(ctx).GetShares(ctx, condition)
+}
+
+func (s *service) GetShareFiles(ctx context.Context, condition model.ShareFilesCondition) ([]byte, xerror.IError) {
+	defer xtrace.Trace(ctx)(condition)
+
+	ok, xerr := s.IDatabase.GetDB(ctx).CheckSharePassword(ctx, model.Share{
+		Identify: condition.Identify,
+		Password: condition.Password,
+	})
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx, "check share %s password fail %v", condition.Identify, xerr)
+		return nil, xerr
+	}
+	if !ok {
+		s.ILogger.Error(ctx, "share %+v password error", condition.Identify)
+		return nil, xerror.Extend(xerror.ErrPermissionDenied, "share %s access denied", condition.ID)
+	}
+
+	// 查询共享
+	shareCondition := model.ShareCondition{
+		IDs:          []string{condition.ID},
+		ExpireAfter:  time.Now().Unix(),
+		ExpireBefore: 0,
+	}
+	shares, _, xerr := s.IDatabase.GetDB(ctx).GetShares(ctx, shareCondition)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx, "get share %+v fail %v", condition.ID, xerr)
+		return nil, xerr
+	}
+	if len(shares) == 0 {
+		s.ILogger.Error(ctx, "share %s not found", condition.ID)
+		return nil, xerror.Extend(xerror.ErrNotFound, "share %s not found", condition.ID)
+	}
+
+	// 查询文件
+	files, _, xerr := s.IFile.GetFiles(ctx, model.FileCondition{IDs: shares[0].Files})
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx, "get file %s fail %v", shares[0].Files, xerr)
+		return nil, xerr
+	}
+	if len(files) == 0 {
+		s.ILogger.Error(ctx, "share %s file %+v not found", condition.ID, shares[0].Files)
+		return nil, xerror.Extend(xerror.ErrNotFound, "share %s do not find any files", condition.ID)
+	}
+
+	// 构建zip文件
+	filePaths := make([]string, 0, len(files))
+	for _, file := range files {
+		filePaths = append(filePaths, file.Path)
+	}
+	zipFilePath := filepath.Join(os.TempDir(), fmt.Sprintf("%s_%s.zip", condition.ID, time.Now().Format("20060102150405.999")))
+	err := xfile.Zip(ctx, zipFilePath, filePaths)
+	if xerror.Error(err) {
+		s.ILogger.Error(ctx, "zip file %s %+v fail %v", zipFilePath, filePaths, err)
+		return nil, xerror.Extend(xerror.ErrInternalError, "share %s zip file fail %v", condition.ID, err)
+	}
+	defer os.Remove(zipFilePath)
+
+	content, err := os.ReadFile(zipFilePath)
+	if xerror.Error(err) {
+		s.ILogger.Error(ctx, "read zip file %s fail %v", zipFilePath, err)
+		return nil, xerror.Extend(xerror.ErrInternalError, "share %s read zip file fail %v", condition.ID, err)
+	}
+	return content, nil
 }
 
 func (s *service) CheckSharePassword(ctx context.Context, share model.Share) (bool, xerror.IError) {

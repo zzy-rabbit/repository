@@ -117,6 +117,28 @@ func (s *service) GetShares(ctx *fiber.Ctx) error {
 	})
 }
 
+func (s *service) GetShareFiles(ctx *fiber.Ctx) error {
+	var header bpmodel.Header
+	var condition model.ShareFilesCondition
+	xerr := s.IHttp.ParseBodyParams(ctx, &header, &condition)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx.UserContext(), "parse query params fail %v", xerr)
+		return ctx.JSON(&bpmodel.HttpResponse{
+			IError: xerr,
+		})
+	}
+
+	// 查找未过期的内容
+	content, xerr := s.IShare.GetShareFiles(ctx.UserContext(), condition)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx.UserContext(), "get shares %+v fail %v", condition.ID, xerr)
+		return ctx.JSON(&bpmodel.HttpResponse{
+			IError: xerr,
+		})
+	}
+	return ctx.Send(content)
+}
+
 func (s *service) CheckSharePassword(ctx *fiber.Ctx) error {
 	var header bpmodel.Header
 	var share model.Share
