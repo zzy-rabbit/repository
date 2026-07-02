@@ -160,6 +160,30 @@
             margin-bottom: 20px;
         }
 
+        /* 过期状态样式 */
+        .expired-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        .expired-state .error-code {
+            font-size: 72px;
+            font-weight: bold;
+            color: #ef4444;
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        .expired-state .error-title {
+            font-size: 24px;
+            color: #374151;
+            margin-bottom: 16px;
+        }
+        .expired-state .error-desc {
+            color: #6b7280;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+
         /* 标题可点击 */
         .page-title {
             cursor: pointer;
@@ -169,7 +193,7 @@
             color: #3b82f6;
         }
 
-        /* 底部固定栏 - 轻微动画版 */
+        /* 底部固定栏 */
         .upload-fixed-bar {
             position: fixed;
             bottom: 20px;
@@ -195,12 +219,12 @@
         }
 
         .upload-fixed-btn:hover {
-            transform: translateY(-2px);     /* 改小：原来-4px → -2px */
+            transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
         }
 
         .upload-fixed-btn:active {
-            transform: translateY(0);       /* 点击时几乎不移动 */
+            transform: translateY(0);
             box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
         }
     </style>
@@ -352,17 +376,28 @@
                 expireTimeEl.textContent = "已过期";
                 expireInfo.classList.add("expired");
                 clearInterval(countdownInterval);
+                showExpiredState();
                 return;
             }
+
             const hours = Math.floor(remaining / 3600);
             const minutes = Math.floor((remaining % 3600) / 60);
-            expireTimeEl.textContent = hours > 0
-                ? `剩余 ${hours} 小时 ${minutes} 分钟`
-                : `剩余 ${minutes} 分钟`;
+            const seconds = remaining % 60;
+
+            let timeText = '';
+            if (hours > 0) {
+                timeText = `${hours}小时${minutes}分钟${seconds}秒`;
+            } else if (minutes > 0) {
+                timeText = `${minutes}分钟${seconds}秒`;
+            } else {
+                timeText = `${seconds}秒`;
+            }
+
+            expireTimeEl.textContent = timeText;
         }
 
         updateCountdown();
-        countdownInterval = setInterval(updateCountdown, 30000);
+        countdownInterval = setInterval(updateCountdown, 1000); // 每秒更新
     }
 
     function showDeleteButton() {
@@ -412,6 +447,23 @@
             <div class="deleted-state">
                 <h2>✅ 已删除</h2>
                 <p>该文件已被成功删除</p>
+                <button onclick="goToHome()" class="btn" style="margin-top: 20px; width: auto; padding: 12px 32px;">
+                    返回首页
+                </button>
+            </div>
+        `;
+    }
+
+    function showExpiredState() {
+        const card = document.querySelector(".card");
+        card.innerHTML = `
+            <h1 onclick="goToHome()" class="page-title">中转站</h1>
+            <div class="expired-state">
+                <div class="error-code">已过期</div>
+                <div class="error-title">内容已过期</div>
+                <div class="error-desc">
+                    该内容已期，可能已被自动清理。
+                </div>
                 <button onclick="goToHome()" class="btn" style="margin-top: 20px; width: auto; padding: 12px 32px;">
                     返回首页
                 </button>
@@ -492,12 +544,11 @@
         }
     }
 
-    /* ---------- 使用 CryptoJS 进行 AES 解密（兼容性更好） ---------- */
+    /* ---------- 使用 CryptoJS 进行 AES 解密 ---------- */
     function decryptAES(encryptedUint8, password) {
         const encryptedWordArray = CryptoJS.lib.WordArray.create(encryptedUint8);
         const key = CryptoJS.SHA256(password);
 
-        // 前16字节为 IV
         const iv = CryptoJS.lib.WordArray.create(encryptedUint8.slice(0, 16));
         const ciphertext = CryptoJS.lib.WordArray.create(encryptedUint8.slice(16));
 
@@ -507,7 +558,6 @@
             { iv: iv, padding: CryptoJS.pad.Pkcs7, mode: CryptoJS.mode.CBC }
         );
 
-        // 转回 Uint8Array
         const decryptedArray = decrypted.words.reduce((acc, word) => {
             acc.push((word >> 24) & 0xff);
             acc.push((word >> 16) & 0xff);

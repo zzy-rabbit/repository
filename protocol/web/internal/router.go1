@@ -8,6 +8,7 @@ import (
 	"github.com/zzy-rabbit/xtools/xerror"
 	"io/fs"
 	"net/http"
+	"time"
 )
 
 func (s *service) setConfig(ctx context.Context, fiberConfig *fiber.Config) {
@@ -38,7 +39,10 @@ func (s *service) registerRouter(ctx context.Context, fiberApp *fiber.App) {
 	})
 	fiberApp.Get("/:repository", func(c *fiber.Ctx) error {
 		repositoryId := c.Params("repository")
-		repositories, _, xerr := s.IRepository.GetRepositories(ctx, model.RepositoryCondition{IDs: []string{repositoryId}})
+		repositories, _, xerr := s.IRepository.GetRepositories(ctx, model.RepositoryCondition{
+			IDs:         []string{repositoryId},
+			ExpireAfter: time.Now().Unix(),
+		})
 		if xerror.Error(xerr, xerror.ErrNotFound) {
 			s.ILogger.Error(ctx, "get repository %s fail %v", repositoryId, xerr)
 			return s.sendPage(c, "error.html")
