@@ -67,18 +67,61 @@
             margin: 20px 0;
             color: #1e2937;
         }
+
+        /* 主面板二维码（隐藏式） */
         #qrcode {
-            margin: 25px auto;
-            padding: 12px;
+            display: none; /* 默认隐藏，主面板不再显示 */
+        }
+
+        /* 新增弹窗样式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
             background: white;
+            padding: 30px 25px;
+            border-radius: 16px;
+            max-width: 340px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+        .modal-content h3 {
+            margin: 0 0 20px 0;
+            color: #1e2937;
+        }
+        .modal-qrcode {
+            margin: 15px auto;
+            padding: 15px;
+            background: #f8fafc;
             border-radius: 12px;
             display: inline-block;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        .compress-info {
-            font-size: 13px;
-            color: #ea580c;
-            margin-top: 4px;
+        .close-modal {
+            margin-top: 20px;
+            padding: 10px 28px;
+            background: #64748b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        /* 按钮样式优化 */
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -86,22 +129,12 @@
 <div class="toast" id="toast"></div>
 
 <div class="card" id="mainCard">
-    <h1>中转站 上传</h1>
+    <h1>中转站</h1>
     <div style="text-align:center; margin:25px 0 15px; font-size:13px; color:#666;">
         <span style="margin-left:8px; color:#888;">使用本服务即表示您已阅读并同意全部条款</span>
         <a href="javascript:void(0)" onclick="showDisclaimer()" style="color:#3b82f6; text-decoration:underline dotted;">
             📜 查看服务免责声明
         </a>
-    </div>
-
-    <div class="item">
-        <div class="label">提取密码（4位字母或数字）</div>
-        <input id="password" type="password" maxlength="4" placeholder="请输入4位密码">
-    </div>
-
-    <div class="item">
-        <div class="label">有效期</div>
-        <select id="expire"></select>
     </div>
 
     <div class="item">
@@ -117,6 +150,16 @@
         <div class="file-list" id="fileList"></div>
     </div>
 
+    <div class="item">
+        <div class="label">提取密码（4位字母或数字）</div>
+        <input id="password" type="password" maxlength="4" placeholder="请输入4位密码">
+    </div>
+
+    <div class="item">
+        <div class="label">有效期</div>
+        <select id="expire"></select>
+    </div>
+
     <button class="btn" id="uploadBtn">提交</button>
 </div>
 
@@ -127,19 +170,32 @@
 
     <div class="share-link" id="shareLink"></div>
 
-    <button class="btn" id="copyBtn" style="background:linear-gradient(135deg,#10b981,#059669); margin-bottom: 20px;">
-        📋 复制链接
-    </button>
+    <!-- 二维码按钮区域 -->
+    <div class="btn-row">
+        <button class="btn" id="copyBtn" style="flex: 1; background:linear-gradient(135deg,#10b981,#059669);">
+            📋 复制链接
+        </button>
+        <button class="btn" id="qrBtn" style="flex: 1; background:linear-gradient(135deg,#3b82f6,#2563eb);">
+            📱 二维码
+        </button>
+    </div>
 
-<!--    <div id="qrcode"></div>-->
-
-<!--    <div style="display:flex; gap:12px; margin-top: 35px;">-->
-<!--        <button class="btn" id="viewBtn" style="flex:1; background:#64748b;">立即查看</button>-->
-<!--        <button class="btn" id="newUploadBtn" style="flex:1;">继续上传新文件</button>-->
-<!--    </div>-->
     <div style="display:flex; gap:12px;">
         <button class="btn" id="viewBtn" style="flex:1; background:#64748b;">立即查看</button>
         <button class="btn" id="newUploadBtn" style="flex:1;">继续上传新文件</button>
+    </div>
+
+    <!-- 隐藏的主面板二维码容器（必须保留） -->
+    <div id="qrcode"></div>
+</div>
+
+<!-- 二维码弹窗 -->
+<div class="modal" id="qrModal">
+    <div class="modal-content">
+        <h3>提取二维码</h3>
+        <div class="modal-qrcode" id="modalQrcode"></div>
+        <p style="color:#64748b; font-size:14px; margin:15px 0;">使用手机扫描即可快速访问</p>
+        <button class="close-modal" id="closeModal">关闭</button>
     </div>
 </div>
 
@@ -151,6 +207,7 @@
     const fileIds = [];
     let uploading = false;
     let repositoryId = null;
+    let currentShareUrl = "";
 
     const passwordInput = document.getElementById("password");
     const expireSelect = document.getElementById("expire");
@@ -164,9 +221,15 @@
     const successPanel = document.getElementById("successPanel");
     const shareLinkEl = document.getElementById("shareLink");
     const copyBtn = document.getElementById("copyBtn");
+    const qrBtn = document.getElementById("qrBtn");
     const viewBtn = document.getElementById("viewBtn");
     const newUploadBtn = document.getElementById("newUploadBtn");
+
+    const qrModal = document.getElementById("qrModal");
+    const modalQrcode = document.getElementById("modalQrcode");
+
     let qrCodeInstance = null;
+    let modalQrInstance = null;
 
     initPasswordInput("password");
 
@@ -200,47 +263,43 @@
     });
 
     async function addFiles(selected) {
+        const filesToProcess = [];
         for (const file of selected) {
             if (!file.type.startsWith("image/")) {
                 showToast(file.name + " 不是图片");
                 continue;
             }
+            filesToProcess.push(file);
+        }
 
+        for (let i = 0; i < filesToProcess.length; i++) {
+            const file = filesToProcess[i];
             let processedFile = file;
 
-            // 如果超过1MB，进行压缩
             if (file.size > MAX_FILE_SIZE) {
                 showToast(`正在压缩 ${file.name}...`);
                 try {
                     processedFile = await compressImage(file, MAX_FILE_SIZE);
-                    showToast(`${file.name} 已压缩 (${formatSize(file.size)} → ${formatSize(processedFile.size)})`);
                 } catch (e) {
-                    showToast(file.name + " 压缩失败，将尝试原图上传");
                     console.error(e);
                 }
             }
 
-            // 去重
-            if (files.some(f => f.name === processedFile.name && f.size === processedFile.size)) {
-                continue;
+            if (!files.some(f => f.name === processedFile.name && f.size === processedFile.size)) {
+                files.push(processedFile);
             }
-
-            files.push(processedFile);
         }
         renderFiles();
     }
 
-    /* 新增：图片压缩函数 */
     async function compressImage(file, maxSize) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
-                    // 计算合适尺寸
                     let { width, height } = img;
-                    const maxDimension = 1920; // 最大边长限制
-
+                    const maxDimension = 1920;
                     if (width > maxDimension || height > maxDimension) {
                         if (width > height) {
                             height = Math.round(height * (maxDimension / width));
@@ -252,39 +311,26 @@
                     }
 
                     const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
 
-                    // 逐步降低质量直到小于1MB
                     let quality = 0.92;
-                    let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                    let compressedSize = Math.round((compressedDataUrl.length * 3) / 4); // base64 大致估算
+                    let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                    let size = Math.round((dataUrl.length * 3) / 4);
 
-                    // 如果还是太大，继续降低质量
-                    while (compressedSize > maxSize && quality > 0.5) {
+                    while (size > maxSize && quality > 0.5) {
                         quality -= 0.05;
-                        compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-                        compressedSize = Math.round((compressedDataUrl.length * 3) / 4);
+                        dataUrl = canvas.toDataURL('image/jpeg', quality);
+                        size = Math.round((dataUrl.length * 3) / 4);
                     }
 
-                    // 转回 File 对象
-                    fetch(compressedDataUrl)
-                        .then(res => res.blob())
-                        .then(blob => {
-                            const compressedFile = new File([blob], file.name, {
-                                type: 'image/jpeg',
-                                lastModified: Date.now()
-                            });
-                            resolve(compressedFile);
-                        })
-                        .catch(reject);
+                    fetch(dataUrl).then(r => r.blob()).then(blob => {
+                        resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {type: 'image/jpeg'}));
+                    }).catch(reject);
                 };
-                img.onerror = reject;
                 img.src = e.target.result;
             };
-            reader.onerror = reject;
             reader.readAsDataURL(file);
         });
     }
@@ -293,26 +339,6 @@
         if (uploading) return;
         files.splice(index, 1);
         renderFiles();
-    }
-
-    function setFileProgress(index, percent) {
-        const item = document.querySelector(`.file-item[data-index="${index}"]`);
-        if (!item) return;
-        let progContainer = item.querySelector('.progress-container');
-        if (!progContainer) {
-            progContainer = document.createElement('div');
-            progContainer.className = 'progress-container';
-            progContainer.innerHTML = `
-                <div class="progress"><div class="progress-inner" style="width:0%"></div></div>
-                <div class="progress-text">0%</div>
-            `;
-            item.appendChild(progContainer);
-        }
-        progContainer.style.display = 'block';
-        const inner = progContainer.querySelector('.progress-inner');
-        const text = progContainer.querySelector('.progress-text');
-        inner.style.width = percent + '%';
-        text.innerText = percent.toFixed(1) + '%';
     }
 
     function renderFiles() {
@@ -334,7 +360,6 @@
             `;
             fileList.appendChild(row);
         });
-
         summary.innerText = files.length === 0
             ? "尚未选择文件"
             : `已选择 ${files.length} 个文件，总大小 ${formatSize(total)}`;
@@ -345,28 +370,39 @@
         uploadBtn.disabled = value;
     }
 
-    /* tus 上传相关函数（保持不变） */
-    async function uploadSingleFile(file, index) {
+    async function uploadSingleFile(file, index) { /* 保持原样 */
         return new Promise((resolve, reject) => {
-            const upload = new tus.Upload(file, {
+            let upload = new tus.Upload(file, {
                 endpoint: host + "/system/api/v1/upload",
                 retryDelays: [0, 1000, 3000, 5000],
                 metadata: { filename: file.name, filetype: file.type },
                 chunkSize: 2 * 1024 * 1024,
-                onError: reject,
+                onError: err => reject(err),
                 onProgress(bytesUploaded, bytesTotal) {
                     const percent = (bytesUploaded / bytesTotal) * 100;
-                    setFileProgress(index, percent);
+                    const item = document.querySelector(`.file-item[data-index="${index}"]`);
+                    if (item) {
+                        let prog = item.querySelector('.progress-container');
+                        if (!prog) {
+                            prog = document.createElement('div');
+                            prog.className = 'progress-container';
+                            prog.innerHTML = `<div class="progress"><div class="progress-inner" style="width:0%"></div></div><div class="progress-text">0%</div>`;
+                            item.appendChild(prog);
+                        }
+                        prog.style.display = 'block';
+                        prog.querySelector('.progress-inner').style.width = percent + '%';
+                        prog.querySelector('.progress-text').innerText = percent.toFixed(1) + '%';
+                    }
                 },
                 async onSuccess() {
                     try {
                         const session = upload.url.split("/").pop();
                         const fileId = await commitUpload(session);
+                        if (upload) upload.abort();
                         resolve(fileId);
                     } catch (e) { reject(e); }
                 }
             });
-
             upload.findPreviousUploads().then(prev => {
                 if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
                 upload.start();
@@ -380,9 +416,8 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ session, type: 1 })
         });
-        if (!resp.ok) throw new Error("commit失败");
         const json = await resp.json();
-        if (json.code !== 0) throw new Error(json.message);
+        if (json.code !== 0) throw new Error(json.message || "commit失败");
         return json.data.id;
     }
 
@@ -397,7 +432,6 @@
                 expire_at: expireAt, title: "", text: ""
             })
         });
-        if (!resp.ok) throw new Error("创建失败");
         const json = await resp.json();
         if (json.code !== 0) throw new Error(json.message);
         return json.data.id;
@@ -406,19 +440,33 @@
     function showSuccessPage(repoId) {
         repositoryId = repoId;
         const fullUrl = host + "/" + repoId;
+        currentShareUrl = fullUrl;
         shareLinkEl.textContent = fullUrl;
 
         mainCard.style.display = "none";
         successPanel.classList.add("show");
 
+        // 清空旧实例
         if (qrCodeInstance) qrCodeInstance.clear();
-        qrCodeInstance = new QRCode(document.getElementById("qrcode"), {
-            text: fullUrl,
-            width: 200,
-            height: 200,
-            colorDark: "#2563eb",
-            colorLight: "#ffffff",
+    }
+
+    function showQrModal() {
+        if (!currentShareUrl) return;
+        qrModal.style.display = "flex";
+
+        modalQrcode.innerHTML = "";
+        modalQrInstance = new QRCode(modalQrcode, {
+            text: currentShareUrl,
+            width: 260,
+            height: 260,
+            colorDark: "#1e40af",
+            colorLight: "#ffffff"
         });
+    }
+
+    function closeQrModal() {
+        qrModal.style.display = "none";
+        if (modalQrInstance) modalQrInstance.clear();
     }
 
     async function startUpload() {
@@ -427,7 +475,8 @@
             return;
         }
         if (files.length === 0) {
-            showToast("请选择文件"); return;
+            showToast("请选择文件");
+            return;
         }
 
         fileIds.length = 0;
@@ -448,56 +497,38 @@
         } catch (e) {
             console.error(e);
             showToast(e.message || "上传失败");
+        } finally {
             setUploading(false);
-            uploadBtn.innerText = "开始提交";
+            uploadBtn.innerText = "提交";
         }
     }
 
-    /* ========== 改进后的复制功能 ========== */
+    /* 复制功能 */
     function copyToClipboard(text) {
-        // 优先使用 Clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast("✅ 链接已复制到剪贴板");
-            }).catch(() => {
-                fallbackCopy(text);
-            });
-        } else {
-            fallbackCopy(text);
-        }
-    }
-
-    function fallbackCopy(text) {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        try {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("✅ 链接已复制");
+        }).catch(() => {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
             document.execCommand("copy");
-            showToast("✅ 链接已复制到剪贴板");
-        } catch (err) {
-            showToast("复制失败，请手动复制");
-        }
-        document.body.removeChild(textarea);
+            document.body.removeChild(ta);
+            showToast("✅ 链接已复制");
+        });
     }
 
     /* 事件绑定 */
     uploadBtn.addEventListener("click", startUpload);
     passwordInput.addEventListener("keydown", e => e.key === "Enter" && startUpload());
 
-    copyBtn.addEventListener("click", () => {
-        if (shareLinkEl.textContent) {
-            copyToClipboard(shareLinkEl.textContent);
-        }
-    });
-
-    viewBtn.addEventListener("click", () => {
-        if (repositoryId) window.location.href = host + "/" + repositoryId;
-    });
-
+    copyBtn.addEventListener("click", () => copyToClipboard(shareLinkEl.textContent));
+    qrBtn.addEventListener("click", showQrModal);
+    viewBtn.addEventListener("click", () => { if (repositoryId) window.location.href = host + "/" + repositoryId; });
     newUploadBtn.addEventListener("click", () => window.location.reload());
+
+    document.getElementById("closeModal").addEventListener("click", closeQrModal);
+    qrModal.addEventListener("click", e => { if (e.target === qrModal) closeQrModal(); });
 
     document.addEventListener("dragover", e => e.preventDefault());
     document.addEventListener("drop", e => e.preventDefault());
