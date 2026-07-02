@@ -6,6 +6,7 @@
     <title>中转站</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
     <link rel="stylesheet" href="/css/common.css">
 
     <style>
@@ -191,7 +192,6 @@
         </a>
     </div>
 
-    <!-- 新增：有效期剩余时间 -->
     <div id="expireInfo" class="expire-info" style="display: none;">
         <span class="expire-label">有效期剩余：</span>
         <span id="expireTime" class="expire-time"></span>
@@ -208,7 +208,6 @@
         <div class="empty">请输入密码后查看文件</div>
     </div>
 
-    <!-- 新增：删除按钮 -->
     <button id="deleteBtn" class="delete-btn" style="display: none;">删除</button>
 </div>
 
@@ -224,7 +223,7 @@
     let currentPassword = "";
     let expireAt = 0;
     let countdownInterval = null;
-    let deleteConfirmStage = 0; // 0: 未点击, 1: 首次点击(确认中)
+    let deleteConfirmStage = 0;
 
     const repository = {};
     const fileInfos = [];
@@ -301,36 +300,29 @@
         }
     }
 
-    /* ---------- 新增：倒计时 ---------- */
     function startCountdown() {
         if (countdownInterval) clearInterval(countdownInterval);
 
         function updateCountdown() {
             const now = Math.floor(Date.now() / 1000);
             const remaining = expireAt - now;
-
             if (remaining <= 0) {
                 expireTimeEl.textContent = "已过期";
                 expireInfo.classList.add("expired");
                 clearInterval(countdownInterval);
                 return;
             }
-
             const hours = Math.floor(remaining / 3600);
             const minutes = Math.floor((remaining % 3600) / 60);
-
-            if (hours > 0) {
-                expireTimeEl.textContent = `剩余 ${hours} 小时 ${minutes} 分钟`;
-            } else {
-                expireTimeEl.textContent = `剩余 ${minutes} 分钟`;
-            }
+            expireTimeEl.textContent = hours > 0
+                ? `剩余 ${hours} 小时 ${minutes} 分钟`
+                : `剩余 ${minutes} 分钟`;
         }
 
         updateCountdown();
         countdownInterval = setInterval(updateCountdown, 30000);
     }
 
-    /* ---------- 删除功能 ---------- */
     function showDeleteButton() {
         deleteBtn.style.display = "block";
     }
@@ -350,29 +342,20 @@
             showToast("请先验证密码");
             return;
         }
-
         showLoading("正在删除...");
-
         try {
             const resp = await fetch(host + "/system/api/v1/repository", {
                 method: "DELETE",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify([{
-                    id: repositoryId,
-                    password: currentPassword
-                }])
+                body: JSON.stringify([{ id: repositoryId, password: currentPassword }])
             });
-
             if (!resp.ok) throw new Error("删除请求失败");
-
             const json = await resp.json();
             if (json.code !== 0) throw new Error(json.message || "删除失败");
 
-            // 删除成功
             hideLoading();
             showDeletedState();
             showToast("删除成功");
-
         } catch (e) {
             hideLoading();
             resetDeleteButton();
@@ -398,7 +381,6 @@
         window.location.href = host || (window.location.protocol + "//" + window.location.host);
     }
 
-    /* ---------- API 调用 ---------- */
     async function authentication(password) {
         const resp = await fetch(host + "/system/api/v1/repository/authentication", {
             method: "POST",
@@ -422,7 +404,6 @@
 
         Object.assign(repository, json.data.list[0]);
         expireAt = repository.expire_at || 0;
-
         if (expireAt > 0) {
             expireInfo.style.display = "flex";
             startCountdown();
@@ -458,11 +439,8 @@
             hideLoading();
             renderFiles();
             passwordInput.disabled = true;
-
-            // 修改1：验证成功后隐藏验证按钮，显示删除按钮
             hideQueryButton();
             showDeleteButton();
-
             showToast("验证成功");
         } catch (e) {
             hideLoading();
@@ -472,8 +450,34 @@
         }
     }
 
-    /* ---------- 下载 & 解压（保持不变） ---------- */
-    async function downloadZip() {
+    /* ---------- 使用 CryptoJS 进行 AES 解密（兼容性更好） ---------- */
+    function decryptAES(encryptedUint8, password) {
+        const encryptedWordArray = CryptoJS.lib.WordArray.create(encryptedUint8);
+        const key = CryptoJS.SHA256(password);
+
+        // 前16字节为 IV
+        const iv = CryptoJS.lib.WordArray.create(encryptedUint8.slice(0, 16));
+        const ciphertext = CryptoJS.lib.WordArray.create(encryptedUint8.slice(16));
+
+        const decrypted = CryptoJS.AES.decrypt(
+            { ciphertext: ciphertext },
+            key,
+            { iv: iv, padding: CryptoJS.pad.Pkcs7, mode: CryptoJS.mode.CBC }
+        );
+
+        // 转回 Uint8Array
+        const decryptedArray = decrypted.words.reduce((acc, word) => {
+            acc.push((word >> 24) & 0xff);
+            acc.push((word >> 16) & 0xff);
+            acc.push((word >> 8) & 0xff);
+            acc.push(word & 0xff);
+            return acc;
+        }, []);
+
+        return new Uint8Array(decryptedArray);
+    }
+
+    async function downloadEncryptedZip() {
         showLoading("正在下载文件...");
         const resp = await fetch(host + "/system/api/v1/repository/file", {
             method: "POST",
@@ -502,7 +506,7 @@
             data.set(chunk, offset);
             offset += chunk.length;
         }
-        return data.buffer;
+        return data;
     }
 
     async function unzipZip(buffer) {
@@ -526,8 +530,16 @@
 
     async function ensureDownloaded() {
         if (downloaded) return;
-        const buffer = await downloadZip();
-        await unzipZip(buffer);
+
+        const encryptedData = await downloadEncryptedZip();
+
+        setLoadingTitle("正在解密文件...");
+        setProgress(50);
+
+        const decryptedUint8 = decryptAES(encryptedData, currentPassword);
+        const decryptedBuffer = decryptedUint8.buffer;
+
+        await unzipZip(decryptedBuffer);
     }
 
     async function previewImage(fileId) {
@@ -539,7 +551,8 @@
             await ensureDownloaded();
         } catch (e) {
             hideLoading();
-            showToast(e.message || "下载失败");
+            console.error(e);
+            showToast(e.message || "下载/解密失败");
             return;
         }
         const blob = blobCache.get(fileId);
@@ -567,18 +580,13 @@
     queryBtn.addEventListener("click", queryRepository);
     passwordInput.addEventListener("keydown", e => e.key === "Enter" && queryRepository());
 
-    // 删除按钮事件
     deleteBtn.addEventListener("click", () => {
         if (deleteConfirmStage === 0) {
             deleteConfirmStage = 1;
             deleteBtn.textContent = "确认删除？";
             deleteBtn.classList.add("confirm");
-
-            // 5秒后自动重置
             setTimeout(() => {
-                if (deleteConfirmStage === 1) {
-                    resetDeleteButton();
-                }
+                if (deleteConfirmStage === 1) resetDeleteButton();
             }, 5000);
         } else {
             deleteRepository();

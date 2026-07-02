@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	reportApi "github.com/zzy-rabbit/bp/protocol/report/api"
+	encryptApi "github.com/zzy-rabbit/bp/tool/encrypt/api"
 	logApi "github.com/zzy-rabbit/bp/tool/log/api"
 	databaseApi "github.com/zzy-rabbit/repository/data/database/api"
 	fileApi "github.com/zzy-rabbit/repository/logic/file/api"
@@ -16,6 +17,7 @@ type service struct {
 	IDatabase databaseApi.IPlugin `xplugin:"repository.data.database"`
 	IReport   reportApi.IPlugin   `xplugin:"bp.protocol.report"`
 	ILogger   logApi.IPlugin      `xplugin:"bp.tool.log"`
+	IEncrypt  encryptApi.IPlugin  `xplugin:"bp.tool.encrypt"`
 	config    api.Config
 	cancel    context.CancelFunc
 }

@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/zzy-rabbit/repository/model"
@@ -141,7 +142,15 @@ func (s *service) GetRepositoryFiles(ctx context.Context, condition model.Reposi
 		s.ILogger.Error(ctx, "read zip file %s fail %v", zipFilePath, err)
 		return nil, xerror.Extend(xerror.ErrInternalError, "repository %s read zip file fail %v", condition.ID, err)
 	}
-	return content, nil
+
+	encodeKey := sha256.Sum256([]byte(condition.Password))
+	encoder := s.IEncrypt.Workflow(ctx, s.IEncrypt.NewAESEncoder(ctx, encodeKey[:]))
+	ciphertext, xerr := encoder.Process(ctx, content)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx, "encrypt zip file %s fail %v", zipFilePath, xerr)
+		return nil, xerror.Extend(xerror.ErrInternalError, "repository %s encrypt zip file fail %v", condition.ID, xerr)
+	}
+	return ciphertext, nil
 }
 
 func (s *service) CheckRepositoryPassword(ctx context.Context, repository model.Repository) (bool, xerror.IError) {

@@ -203,6 +203,7 @@
 <script>
     const PASSWORD_REG = /^[A-Za-z0-9]{4}$/;
     const MAX_FILE_SIZE = 1024 * 1024;
+    const MAX_FILES = 9;  // 最大上传文件数，方便后续修改
     const files = [];
     const fileIds = [];
     let uploading = false;
@@ -273,6 +274,10 @@
         }
 
         for (let i = 0; i < filesToProcess.length; i++) {
+            if (files.length >= MAX_FILES) {
+                showToast(`最多只能上传 ${MAX_FILES} 个文件`);
+                break;
+            }
             const file = filesToProcess[i];
             let processedFile = file;
 
@@ -478,6 +483,10 @@
             showToast("请选择文件");
             return;
         }
+        if (files.length > MAX_FILES) {
+            showToast(`最多只能上传 ${MAX_FILES} 个文件`);
+            return;
+        }
 
         fileIds.length = 0;
         setUploading(true);
@@ -503,19 +512,36 @@
         }
     }
 
-    /* 复制功能 */
+    /* 复制功能 - 增强兼容性 */
     function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(() => {
-            showToast("✅ 链接已复制");
-        }).catch(() => {
-            const ta = document.createElement("textarea");
-            ta.value = text;
-            document.body.appendChild(ta);
-            ta.select();
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast("✅ 链接已复制");
+            }).catch(() => {
+                fallbackCopy(text);
+            });
+        } else {
+            fallbackCopy(text);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        ta.style.top = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try {
             document.execCommand("copy");
-            document.body.removeChild(ta);
             showToast("✅ 链接已复制");
-        });
+        } catch (err) {
+            showToast("❌ 复制失败，请手动复制");
+            console.error("Fallback copy failed", err);
+        }
+        document.body.removeChild(ta);
     }
 
     /* 事件绑定 */
