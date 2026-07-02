@@ -168,6 +168,41 @@
         .page-title:hover {
             color: #3b82f6;
         }
+
+        /* 底部固定栏 - 轻微动画版 */
+        .upload-fixed-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 90%;
+            max-width: 420px;
+        }
+
+        .upload-fixed-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            border: none;
+            padding: 15px 24px;
+            border-radius: 9999px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .upload-fixed-btn:hover {
+            transform: translateY(-2px);     /* 改小：原来-4px → -2px */
+            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .upload-fixed-btn:active {
+            transform: translateY(0);       /* 点击时几乎不移动 */
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
     </style>
 </head>
 <body>
@@ -184,6 +219,13 @@
 </div>
 
 <div class="card">
+    <!-- 底部固定上传按钮 -->
+    <div class="upload-fixed-bar">
+        <button onclick="goToHome()" class="upload-fixed-btn">
+            🚀 上传文件
+        </button>
+    </div>
+
     <h1 onclick="goToHome()" class="page-title">中转站</h1>
     <div style="text-align:center; margin:25px 0 15px; font-size:13px; color:#666;">
         <span style="margin-left:8px; color:#888;">使用本服务即表示您已阅读并同意全部条款</span>
