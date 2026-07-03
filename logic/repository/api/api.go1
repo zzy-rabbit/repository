@@ -24,6 +24,8 @@ type IPlugin interface {
 	GetRepositoryFiles(ctx context.Context, condition model.RepositoryFilesCondition) ([]byte, xerror.IError)
 	CheckRepositoryPassword(ctx context.Context, repository model.Repository) (bool, xerror.IError)
 	ReportRepository(ctx context.Context, identify model.Identify) xerror.IError
+	IncreaseExtractCount(ctx context.Context, identify model.Identify) xerror.IError
+	Rating(ctx context.Context, rating model.Rating) xerror.IError
 
 	AddComment(ctx context.Context, comment model.Comment) (model.Identify, xerror.IError)
 	UpdateComment(ctx context.Context, comment model.Comment) xerror.IError

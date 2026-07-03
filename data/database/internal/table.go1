@@ -17,15 +17,18 @@ func (*File) TableName() string {
 }
 
 type Repository struct {
-	ID       int      `gorm:"column:id;primaryKey;autoIncrement"`
-	Identify string   `gorm:"column:identify;unique"`
-	Files    []string `gorm:"column:files;serializer:json"`
-	Password string   `gorm:"column:password"`
-	Title    string   `gorm:"column:title"`
-	Text     string   `gorm:"column:text"`
-	CreateAt int64    `gorm:"column:create_at"`
-	Expire   int64    `gorm:"column:expire_at"`
-	Report   int64    `gorm:"column:report"`
+	ID           int      `gorm:"column:id;primaryKey;autoIncrement"`
+	Identify     string   `gorm:"column:identify;unique"`
+	Files        []string `gorm:"column:files;serializer:json"`
+	Password     string   `gorm:"column:password"`
+	Title        string   `gorm:"column:title"`
+	Text         string   `gorm:"column:text"`
+	CreateAt     int64    `gorm:"column:create_at"`
+	Expire       int64    `gorm:"column:expire_at"`
+	Report       int64    `gorm:"column:report"`
+	ExtractCount int64    `gorm:"column:extract_count"`
+	RatingCount  int64    `gorm:"column:rating_count"`
+	RatingSum    int64    `gorm:"column:rating_sum"`
 }
 
 func (*Repository) TableName() string {

@@ -41,6 +41,9 @@ func (s *Repository) FromModel(m model.Repository) {
 	s.Text = m.Text
 	s.CreateAt = m.CreateAt
 	s.Expire = m.ExpireAt
+	s.ExtractCount = m.ExtractCount
+	s.RatingCount = m.RatingCount
+	s.RatingSum = m.RatingSum
 	s.Files = make([]string, len(m.Files))
 	copy(s.Files, m.Files)
 }
@@ -52,12 +55,15 @@ func (s *Repository) ToModel() model.Repository {
 		Identify: model.Identify{
 			ID: s.Identify,
 		},
-		Files:    files,
-		Password: s.Password,
-		Title:    s.Title,
-		Text:     s.Text,
-		CreateAt: s.CreateAt,
-		ExpireAt: s.Expire,
+		Files:        files,
+		Password:     s.Password,
+		Title:        s.Title,
+		Text:         s.Text,
+		CreateAt:     s.CreateAt,
+		ExpireAt:     s.Expire,
+		ExtractCount: s.ExtractCount,
+		RatingCount:  s.RatingCount,
+		RatingSum:    s.RatingSum,
 	}
 }
 

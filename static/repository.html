@@ -90,6 +90,42 @@
             color: #b91c1c;
         }
 
+        /* 评分区域 */
+        .rating-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        .rating-title {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 15px;
+            color: #334155;
+        }
+        .stars {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            font-size: 32px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+        .star {
+            color: #e2e8f0;
+            transition: color 0.2s;
+        }
+        .star:hover,
+        .star.active {
+            color: #fbbf24;
+        }
+        .rating-stats {
+            text-align: center;
+            font-size: 13px;
+            color: #64748b;
+        }
+
         /* 删除按钮 */
         .delete-btn {
             margin-top: 15px;
@@ -274,6 +310,19 @@
         <div class="empty">请输入密码后查看文件</div>
     </div>
 
+    <!-- 评分区域（下载后显示） -->
+    <div id="ratingSection" class="rating-section" style="display: none;">
+        <div class="rating-title">请对本次中转服务做出评价</div>
+        <div id="stars" class="stars">
+            <span class="star" data-value="1">★</span>
+            <span class="star" data-value="2">★</span>
+            <span class="star" data-value="3">★</span>
+            <span class="star" data-value="4">★</span>
+            <span class="star" data-value="5">★</span>
+        </div>
+        <div id="ratingStats" class="rating-stats"></div>
+    </div>
+
     <button id="deleteBtn" class="delete-btn" style="display: none;">删除</button>
 </div>
 
@@ -290,6 +339,7 @@
     let expireAt = 0;
     let countdownInterval = null;
     let deleteConfirmStage = 0;
+    let hasRated = false;
 
     const repository = {};
     const fileInfos = [];
@@ -309,6 +359,9 @@
     const expireInfo = document.getElementById("expireInfo");
     const expireTimeEl = document.getElementById("expireTime");
     const deleteBtn = document.getElementById("deleteBtn");
+    const ratingSection = document.getElementById("ratingSection");
+    const starsContainer = document.getElementById("stars");
+    const ratingStatsEl = document.getElementById("ratingStats");
 
     initPasswordInput("password");
 
@@ -366,6 +419,77 @@
         }
     }
 
+    function renderRatingStats() {
+        const count = repository.extract_count || 0;
+        const ratingCount = repository.rating_count || 0;
+        const sum = repository.rating_sum || 0;
+        const avg = ratingCount > 0 ? (sum / ratingCount).toFixed(1) : "0.0";
+
+        ratingStatsEl.innerHTML = `
+            下载次数 <strong>${count}</strong> ，评价次数 <strong>${ratingCount}</strong> ，平均评分 <strong>${avg}</strong>
+        `;
+    }
+
+    function setupStarRating() {
+        const stars = starsContainer.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('click', async () => {
+                if (hasRated) {
+                    showToast("您已评价过本次服务");
+                    return;
+                }
+                const ratingValue = parseInt(star.dataset.value);
+
+                try {
+                    const resp = await fetch(host + "/system/api/v1/repository/rating", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            id: repositoryId,
+                            password: currentPassword,
+                            rating: ratingValue
+                        })
+                    });
+
+                    if (!resp.ok) throw new Error("评价提交失败");
+                    const json = await resp.json();
+                    if (json.code !== 0) throw new Error(json.message || "评价失败");
+
+                    hasRated = true;
+                    stars.forEach(s => {
+                        s.classList.toggle('active', parseInt(s.dataset.value) <= ratingValue);
+                    });
+                    showToast(`感谢您的 ${ratingValue} 星评价！`);
+
+                    await loadRepository();
+                    renderRatingStats();
+                } catch (e) {
+                    showToast(e.message || "评价失败");
+                }
+            });
+
+            star.addEventListener('mouseover', () => {
+                const value = parseInt(star.dataset.value);
+                stars.forEach(s => {
+                    s.style.color = parseInt(s.dataset.value) <= value ? '#fbbf24' : '#e2e8f0';
+                });
+            });
+
+            star.addEventListener('mouseout', () => {
+                stars.forEach(s => {
+                    s.style.color = s.classList.contains('active') ? '#fbbf24' : '#e2e8f0';
+                });
+            });
+        });
+    }
+
+    function showRatingSection() {
+        if (ratingSection.style.display === "block") return;
+        ratingSection.style.display = "block";
+        renderRatingStats();
+        setupStarRating();
+    }
+
     function startCountdown() {
         if (countdownInterval) clearInterval(countdownInterval);
 
@@ -397,7 +521,7 @@
         }
 
         updateCountdown();
-        countdownInterval = setInterval(updateCountdown, 1000); // 每秒更新
+        countdownInterval = setInterval(updateCountdown, 1000);
     }
 
     function showDeleteButton() {
@@ -624,7 +748,6 @@
         if (downloaded) return;
 
         const encryptedData = await downloadEncryptedZip();
-
         setLoadingTitle("正在解密文件...");
         setProgress(50);
 
@@ -641,6 +764,8 @@
         }
         try {
             await ensureDownloaded();
+            // 下载成功后显示评价区域
+            showRatingSection();
         } catch (e) {
             hideLoading();
             console.error(e);

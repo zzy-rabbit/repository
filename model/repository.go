@@ -2,12 +2,15 @@ package model
 
 type Repository struct {
 	Identify
-	Files    []string `json:"files"`
-	Password string   `json:"password"`
-	Title    string   `json:"title"`
-	Text     string   `json:"text"`
-	CreateAt int64    `json:"create_at"`
-	ExpireAt int64    `json:"expire_at"`
+	Files        []string `json:"files"`
+	Password     string   `json:"password"`
+	Title        string   `json:"title"`
+	Text         string   `json:"text"`
+	CreateAt     int64    `json:"create_at"`
+	ExpireAt     int64    `json:"expire_at"`
+	ExtractCount int64    `json:"extract_count"`
+	RatingCount  int64    `json:"rating_count"`
+	RatingSum    int64    `json:"rating_sum"`
 }
 
 type RepositoryCondition struct {
@@ -37,4 +40,10 @@ type CommentCondition struct {
 	*PageQuery
 	IDs          []string `json:"ids"`
 	Repositories []string `json:"repositories"`
+}
+
+type Rating struct {
+	Identify
+	Password string `json:"password"`
+	Rating   int    `json:"rating"`
 }

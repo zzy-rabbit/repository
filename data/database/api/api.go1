@@ -31,6 +31,8 @@ type ISession interface {
 	GetRepositories(ctx context.Context, condition model.RepositoryCondition) ([]model.Repository, model.PageInfo, xerror.IError)
 	CheckRepositoryPassword(ctx context.Context, repository model.Repository) (bool, xerror.IError)
 	ReportRepository(ctx context.Context, identify model.Identify) xerror.IError
+	IncreaseExtractCount(ctx context.Context, identify model.Identify) xerror.IError
+	Rating(ctx context.Context, rating model.Rating) xerror.IError
 
 	AddComment(ctx context.Context, comment model.Comment) (int, xerror.IError)
 	UpdateComment(ctx context.Context, comment model.Comment) xerror.IError

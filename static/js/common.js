@@ -81,6 +81,9 @@ const DISCLAIMER_HTML = `
 <h3 style="margin:22px 0 10px; color:#1e40af; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">五、 法律适用与争议解决</h3>
 <p>本声明适用中华人民共和国大陆地区法律。如发生争议，双方应友好协商解决；协商不成的，任何一方均可向本服务运营方所在地人民法院提起诉讼。</p>
 
+<h3 style="margin:22px 0 10px; color:#1e40af; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">六、 服务评价说明</h3>
+<p>本服务可能提供用户对体验的星级评价功能，该评价仅反映用户对平台传输速度、操作便捷性等维度的主观感受，不代表对文件内容合法性、真实性或价值的任何认可。评价数据仅用于服务优化。</p>
+
 <div style="margin-top:32px; padding:16px; background:#f8fafc; border-radius:8px; font-size:13.5px; color:#555; text-align:center;">
     使用本服务即表示您已阅读、理解并同意以上全部条款。本声明的最终解释权归本服务运营方所有。
 </div>

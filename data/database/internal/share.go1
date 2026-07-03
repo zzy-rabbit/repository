@@ -115,6 +115,27 @@ func (s *session) ReportRepository(ctx context.Context, identify model.Identify)
 	return nil
 }
 
+func (s *session) IncreaseExtractCount(ctx context.Context, identify model.Identify) xerror.IError {
+	err := s.db.Model(&Repository{}).Where("identify = ?", identify.ID).Update("extract_count", gorm.Expr("extract_count + 1")).Error
+	if xerror.Error(err) {
+		s.logger.Error(ctx, "extract count repository %+v fail %v", identify, err)
+		return transError(err)
+	}
+	return nil
+}
+
+func (s *session) Rating(ctx context.Context, rating model.Rating) xerror.IError {
+	err := s.db.Model(&Repository{}).Where("identify = ?", rating.ID).Updates(map[string]interface{}{
+		"rating_count": gorm.Expr("rating_count + 1"),
+		"rating_sum":   gorm.Expr("rating_sum + ?", rating.Rating),
+	}).Error
+	if xerror.Error(err) {
+		s.logger.Error(ctx, "repository rating %+v fail %v", rating, err)
+		return transError(err)
+	}
+	return nil
+}
+
 func (s *session) AddComment(ctx context.Context, comment model.Comment) (int, xerror.IError) {
 	var table Comment
 	table.FromModel(comment)

@@ -163,6 +163,29 @@ func (s *service) ReportRepository(ctx context.Context, identify model.Identify)
 	return s.IDatabase.GetDB(ctx).ReportRepository(ctx, identify)
 }
 
+func (s *service) IncreaseExtractCount(ctx context.Context, identify model.Identify) xerror.IError {
+	defer xtrace.Trace(ctx)(identify)
+	return s.IDatabase.GetDB(ctx).IncreaseExtractCount(ctx, identify)
+}
+
+func (s *service) Rating(ctx context.Context, rating model.Rating) xerror.IError {
+	defer xtrace.Trace(ctx)(rating)
+
+	ok, xerr := s.IDatabase.GetDB(ctx).CheckRepositoryPassword(ctx, model.Repository{
+		Identify: rating.Identify,
+		Password: rating.Password,
+	})
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx, "check repository %s password fail %v", rating.Identify, xerr)
+		return xerr
+	}
+	if !ok {
+		s.ILogger.Error(ctx, "repository %+v password error", rating.Identify)
+		return xerror.Extend(xerror.ErrPermissionDenied, "repository %s access denied", rating.ID)
+	}
+	return s.IDatabase.GetDB(ctx).Rating(ctx, rating)
+}
+
 func (s *service) AddComment(ctx context.Context, comment model.Comment) (model.Identify, xerror.IError) {
 	defer xtrace.Trace(ctx)(comment)
 	if comment.ID == "" {

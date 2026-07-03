@@ -58,6 +58,7 @@ func (s *service) registerRouter(ctx context.Context, fiberApp *fiber.App) {
 	repositoryGroup.Get("", s.GetRepositories)
 	repositoryGroup.Post("authentication", s.CheckRepositoryPassword)
 	repositoryGroup.Post("report", s.ReportRepository)
+	repositoryGroup.Post("rating", s.Rating)
 
 	//commentGroup := fiberApp.Group(
 	//	"/system/api/v1/comment",

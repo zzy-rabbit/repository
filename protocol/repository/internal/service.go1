@@ -162,6 +162,11 @@ func (s *service) GetRepositoryFiles(ctx *fiber.Ctx) error {
 			IError: xerr,
 		})
 	}
+
+	xerr = s.IRepository.IncreaseExtractCount(ctx.UserContext(), condition.Identify)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx.UserContext(), "increase extract count %+v fail %v", condition.Identify, xerr)
+	}
 	return ctx.Send(content)
 }
 
@@ -316,6 +321,29 @@ func (s *service) ReportRepository(ctx *fiber.Ctx) error {
 	xerr = s.IRepository.ReportRepository(ctx.UserContext(), identify)
 	if xerror.Error(xerr) {
 		s.ILogger.Error(ctx.UserContext(), "report repository %+v fail %v", identify, xerr)
+		return ctx.JSON(&bpmodel.HttpResponse{
+			IError: xerr,
+		})
+	}
+	return ctx.JSON(&bpmodel.HttpResponse{
+		IError: xerror.ErrSuccess,
+	})
+}
+
+func (s *service) Rating(ctx *fiber.Ctx) error {
+	var header bpmodel.Header
+	var rating model.Rating
+	xerr := s.IHttp.ParseBodyParams(ctx, &header, &rating)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx.UserContext(), "parse body params fail %v", xerr)
+		return ctx.JSON(&bpmodel.HttpResponse{
+			IError: xerr,
+		})
+	}
+
+	xerr = s.IRepository.Rating(ctx.UserContext(), rating)
+	if xerror.Error(xerr) {
+		s.ILogger.Error(ctx.UserContext(), "repository rating %+v fail %v", rating, xerr)
 		return ctx.JSON(&bpmodel.HttpResponse{
 			IError: xerr,
 		})
