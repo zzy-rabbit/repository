@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
     <title>中转站</title>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -133,6 +133,7 @@
         /* 删除按钮 */
         .delete-btn {
             margin-top: 15px;
+            margin-bottom: 20px;
             background: #ef4444;
             color: white;
             border: none;
@@ -142,6 +143,8 @@
             font-size: 15px;
             width: 100%;
             transition: .2s;
+            position: relative;
+            z-index: 10;
         }
         .delete-btn:hover {
             background: #dc2626;
@@ -233,15 +236,18 @@
             color: #3b82f6;
         }
 
-        /* 底部固定栏 */
+        /* 底部固定上传按钮 - 往上提一点 */
         .upload-fixed-bar {
             position: fixed;
-            bottom: 20px;
+            bottom: 12px;                    /* 关键：从0改为12px */
             left: 50%;
             transform: translateX(-50%);
-            z-index: 1000;
+            z-index: 9999;
             width: 90%;
             max-width: 420px;
+            padding-bottom: env(safe-area-inset-bottom, 8px);
+            box-sizing: border-box;
+            pointer-events: none;
         }
 
         .upload-fixed-btn {
@@ -256,6 +262,7 @@
             box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
             cursor: pointer;
             transition: all 0.25s ease;
+            pointer-events: auto;
         }
 
         .upload-fixed-btn:hover {
@@ -263,9 +270,18 @@
             box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
         }
 
-        .upload-fixed-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        /* 卡片底部留白 */
+        .card {
+            padding-bottom: 50px;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding-bottom: 50px;
+            }
+            .delete-btn {
+                margin-bottom: 18px;
+            }
         }
     </style>
 </head>
@@ -452,23 +468,26 @@
             const value = parseInt(star.dataset.value);
             star.classList.add('active', 'disabled');
             star.style.color = value <= ratingValue ? '#fbbf24' : '#e2e8f0';
-            // 移除事件，防止重复点击
             star.style.pointerEvents = 'none';
         });
     }
 
+    function updateRatingStatsLocally(ratingValue) {
+        if (!repository.rating_count) repository.rating_count = 0;
+        if (!repository.rating_sum) repository.rating_sum = 0;
+
+        repository.rating_count += 1;
+        repository.rating_sum += ratingValue;
+        renderRatingStats();
+    }
+
     function setupStarRating() {
+        const oldStars = starsContainer.querySelectorAll('.star');
+        oldStars.forEach(star => star.replaceWith(star.cloneNode(true)));
+
         const stars = starsContainer.querySelectorAll('.star');
 
         stars.forEach(star => {
-            // 先移除旧事件（防止重复绑定）
-            star.replaceWith(star.cloneNode(true));
-        });
-
-        // 重新获取星星元素
-        const newStars = starsContainer.querySelectorAll('.star');
-
-        newStars.forEach(star => {
             star.addEventListener('click', async () => {
                 if (hasRated) {
                     showToast("您已评价过本次服务");
@@ -493,27 +512,24 @@
                     if (json.code !== 0) throw new Error(json.message || "评价失败");
 
                     hasRated = true;
-                    lockStarRating(ratingValue);   // 锁定星星状态
-                    showToast("评价成功，感谢您的反馈！");
+                    updateRatingStatsLocally(ratingValue);
+                    lockStarRating(ratingValue);
                 } catch (e) {
                     showToast(e.message || "评价失败");
                 }
             });
 
-            // Hover 效果（仅在未评价时有效）
             star.addEventListener('mouseover', () => {
                 if (hasRated) return;
                 const value = parseInt(star.dataset.value);
-                newStars.forEach(s => {
+                stars.forEach(s => {
                     s.style.color = parseInt(s.dataset.value) <= value ? '#fbbf24' : '#e2e8f0';
                 });
             });
 
             star.addEventListener('mouseout', () => {
                 if (hasRated) return;
-                newStars.forEach(s => {
-                    s.style.color = '#e2e8f0';
-                });
+                stars.forEach(s => s.style.color = '#e2e8f0');
             });
         });
     }
