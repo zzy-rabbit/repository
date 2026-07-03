@@ -343,7 +343,7 @@
         <div id="ratingStats" class="rating-stats"></div>
     </div>
 
-    <button id="deleteBtn" class="delete-btn" style="display: none;">删除</button>
+    <button id="deleteBtn" class="delete-btn" style="display: none;">删除所有文件</button>
 </div>
 
 <div id="viewer" class="viewer">
@@ -851,7 +851,7 @@
     deleteBtn.addEventListener("click", () => {
         if (deleteConfirmStage === 0) {
             deleteConfirmStage = 1;
-            deleteBtn.textContent = "确认删除？";
+            deleteBtn.textContent = "删除后无法恢复，确认吗？";
             deleteBtn.classList.add("confirm");
             setTimeout(() => {
                 if (deleteConfirmStage === 1) resetDeleteButton();
