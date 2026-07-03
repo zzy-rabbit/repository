@@ -13,7 +13,7 @@ func (s *service) registerRouter(ctx context.Context, fiberApp *fiber.App) {
 		}),
 	)
 	fileGroup.Post("/commit", s.CommitFile)
-	fileGroup.Delete("/revert", s.RevertFile)
-	fileGroup.Delete("", s.DeleteFile)
+	//fileGroup.Delete("/revert", s.RevertFile)
+	//fileGroup.Delete("", s.DeleteFile)
 	fileGroup.Get("", s.GetFile)
 }

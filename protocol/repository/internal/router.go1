@@ -53,7 +53,7 @@ func (s *service) registerRouter(ctx context.Context, fiberApp *fiber.App) {
 	)
 
 	repositoryGroup.Post("add", s.AddRepository)
-	repositoryGroup.Post("update", s.UpdateRepository)
+	//repositoryGroup.Post("update", s.UpdateRepository)
 	repositoryGroup.Delete("", s.DeleteRepositories)
 	repositoryGroup.Get("", s.GetRepositories)
 	repositoryGroup.Post("authentication", s.CheckRepositoryPassword)
