@@ -110,15 +110,19 @@
             gap: 8px;
             font-size: 32px;
             margin-bottom: 16px;
-            cursor: pointer;
         }
         .star {
             color: #e2e8f0;
             transition: color 0.2s;
+            cursor: pointer;
         }
         .star:hover,
         .star.active {
             color: #fbbf24;
+        }
+        .star.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
         }
         .rating-stats {
             text-align: center;
@@ -310,9 +314,9 @@
         <div class="empty">请输入密码后查看文件</div>
     </div>
 
-    <!-- 评分区域（下载后显示） -->
+    <!-- 评分区域 -->
     <div id="ratingSection" class="rating-section" style="display: none;">
-        <div class="rating-title">请对本次中转服务做出评价</div>
+        <div class="rating-title">请对本次服务做出评价</div>
         <div id="stars" class="stars">
             <span class="star" data-value="1">★</span>
             <span class="star" data-value="2">★</span>
@@ -340,6 +344,7 @@
     let countdownInterval = null;
     let deleteConfirmStage = 0;
     let hasRated = false;
+    let extractCountUpdated = false;
 
     const repository = {};
     const fileInfos = [];
@@ -430,14 +435,46 @@
         `;
     }
 
-    function setupStarRating() {
+    function incrementExtractCount() {
+        if (extractCountUpdated) return;
+        if (repository.extract_count !== undefined) {
+            repository.extract_count += 1;
+        } else {
+            repository.extract_count = 1;
+        }
+        extractCountUpdated = true;
+        renderRatingStats();
+    }
+
+    function lockStarRating(ratingValue) {
         const stars = starsContainer.querySelectorAll('.star');
         stars.forEach(star => {
+            const value = parseInt(star.dataset.value);
+            star.classList.add('active', 'disabled');
+            star.style.color = value <= ratingValue ? '#fbbf24' : '#e2e8f0';
+            // 移除事件，防止重复点击
+            star.style.pointerEvents = 'none';
+        });
+    }
+
+    function setupStarRating() {
+        const stars = starsContainer.querySelectorAll('.star');
+
+        stars.forEach(star => {
+            // 先移除旧事件（防止重复绑定）
+            star.replaceWith(star.cloneNode(true));
+        });
+
+        // 重新获取星星元素
+        const newStars = starsContainer.querySelectorAll('.star');
+
+        newStars.forEach(star => {
             star.addEventListener('click', async () => {
                 if (hasRated) {
                     showToast("您已评价过本次服务");
                     return;
                 }
+
                 const ratingValue = parseInt(star.dataset.value);
 
                 try {
@@ -456,28 +493,26 @@
                     if (json.code !== 0) throw new Error(json.message || "评价失败");
 
                     hasRated = true;
-                    stars.forEach(s => {
-                        s.classList.toggle('active', parseInt(s.dataset.value) <= ratingValue);
-                    });
-                    showToast(`感谢您的 ${ratingValue} 星评价！`);
-
-                    await loadRepository();
-                    renderRatingStats();
+                    lockStarRating(ratingValue);   // 锁定星星状态
+                    showToast("评价成功，感谢您的反馈！");
                 } catch (e) {
                     showToast(e.message || "评价失败");
                 }
             });
 
+            // Hover 效果（仅在未评价时有效）
             star.addEventListener('mouseover', () => {
+                if (hasRated) return;
                 const value = parseInt(star.dataset.value);
-                stars.forEach(s => {
+                newStars.forEach(s => {
                     s.style.color = parseInt(s.dataset.value) <= value ? '#fbbf24' : '#e2e8f0';
                 });
             });
 
             star.addEventListener('mouseout', () => {
-                stars.forEach(s => {
-                    s.style.color = s.classList.contains('active') ? '#fbbf24' : '#e2e8f0';
+                if (hasRated) return;
+                newStars.forEach(s => {
+                    s.style.color = '#e2e8f0';
                 });
             });
         });
@@ -755,6 +790,7 @@
         const decryptedBuffer = decryptedUint8.buffer;
 
         await unzipZip(decryptedBuffer);
+        incrementExtractCount();
     }
 
     async function previewImage(fileId) {
@@ -764,7 +800,6 @@
         }
         try {
             await ensureDownloaded();
-            // 下载成功后显示评价区域
             showRatingSection();
         } catch (e) {
             hideLoading();
