@@ -43,10 +43,10 @@ const DISCLAIMER_HTML = `
 <div style="max-height: 70vh; overflow-y: auto; padding: 20px 28px; line-height: 1.75; font-size: 14.5px; color: #333;">
     <h2 style="text-align:center; margin-bottom:24px; color:#1e40af;">中转站服务免责声明</h2>
 <p style="text-align:center; color:#666; margin-bottom:20px;">
-    <strong>版本：V1.1</strong>　更新日期：2026年7月3日
+    <strong>版本：V1.0</strong>　更新日期：2026年1月3日
 </p>
 
-<p>感谢您使用本文件中转站服务（以下简称“本服务”）。本服务是一项面向公众的临时文件存储与分享工具，仅供用户进行合法的文件临时中转与传输。</p>
+<p>感谢您使用本文件中转站服务（以下简称“本服务”）。本服务是一项临时的文件中转测试工具，仅供进行合法的文件临时中转与技术测试。</p>
 <p>在使用本服务前，请您务必仔细阅读并充分理解本免责声明的全部内容。您使用本服务的任何功能，即视为您已完全接受并同意本声明的所有条款。</p>
 
 <h3 style="margin:22px 0 10px; color:#1e40af; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">一、 用户责任与账号安全</h3>

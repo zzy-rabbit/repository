@@ -343,7 +343,7 @@
         <div id="ratingStats" class="rating-stats"></div>
     </div>
 
-    <button id="deleteBtn" class="delete-btn" style="display: none;">删除所有文件</button>
+<!--    <button id="deleteBtn" class="delete-btn" style="display: none;">删除所有文件</button>-->
 </div>
 
 <div id="viewer" class="viewer">
@@ -379,7 +379,7 @@
     const viewerImage = document.getElementById("viewerImage");
     const expireInfo = document.getElementById("expireInfo");
     const expireTimeEl = document.getElementById("expireTime");
-    const deleteBtn = document.getElementById("deleteBtn");
+    // const deleteBtn = document.getElementById("deleteBtn");
     const ratingSection = document.getElementById("ratingSection");
     const starsContainer = document.getElementById("stars");
     const ratingStatsEl = document.getElementById("ratingStats");
@@ -575,9 +575,9 @@
         countdownInterval = setInterval(updateCountdown, 1000);
     }
 
-    function showDeleteButton() {
-        deleteBtn.style.display = "block";
-    }
+    // function showDeleteButton() {
+    //     deleteBtn.style.display = "block";
+    // }
 
     function hideQueryButton() {
         queryBtn.style.display = "none";
@@ -585,8 +585,8 @@
 
     function resetDeleteButton() {
         deleteConfirmStage = 0;
-        deleteBtn.textContent = "删除文件";
-        deleteBtn.classList.remove("confirm");
+        // deleteBtn.textContent = "删除文件";
+        // deleteBtn.classList.remove("confirm");
     }
 
     async function deleteRepository() {
@@ -709,7 +709,7 @@
             renderFiles();
             passwordInput.disabled = true;
             hideQueryButton();
-            showDeleteButton();
+            // showDeleteButton();
             showToast("验证成功");
         } catch (e) {
             hideLoading();
@@ -848,18 +848,18 @@
     queryBtn.addEventListener("click", queryRepository);
     passwordInput.addEventListener("keydown", e => e.key === "Enter" && queryRepository());
 
-    deleteBtn.addEventListener("click", () => {
-        if (deleteConfirmStage === 0) {
-            deleteConfirmStage = 1;
-            deleteBtn.textContent = "删除后无法恢复，确认吗？";
-            deleteBtn.classList.add("confirm");
-            setTimeout(() => {
-                if (deleteConfirmStage === 1) resetDeleteButton();
-            }, 5000);
-        } else {
-            deleteRepository();
-        }
-    });
+    // deleteBtn.addEventListener("click", () => {
+    //     if (deleteConfirmStage === 0) {
+    //         deleteConfirmStage = 1;
+    //         deleteBtn.textContent = "删除后无法恢复，确认吗？";
+    //         deleteBtn.classList.add("confirm");
+    //         setTimeout(() => {
+    //             if (deleteConfirmStage === 1) resetDeleteButton();
+    //         }, 5000);
+    //     } else {
+    //         deleteRepository();
+    //     }
+    // });
 
     viewer.addEventListener("click", () => {
         viewer.style.display = "none";
